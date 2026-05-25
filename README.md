@@ -227,12 +227,18 @@ curl -X POST http://localhost:8000/ingest \
   -H "Content-Type: application/json" \
   -d '[{"source_id":"web-prod","msg":"a"},{"source_id":"web-prod","msg":"b"}]'
 
-# File upload (NDJSON / JSON array / CSV)
+# File upload — format is auto-detected from the file extension
+# (.csv, .ndjson / .jsonl, .json). For CSV, cell values are auto-typed
+# (numbers, booleans, null). Pass `-F "format=..."` only to override.
 curl -X POST http://localhost:8000/ingest/upload \
   -H "X-API-Key: dpk_..." \
   -F "source_id=web-prod" \
-  -F "format=ndjson" \
-  -F "file=@events.ndjson"
+  -F "file=@events.csv"
+```
+
+The upload response reports which format was used:
+```json
+{"accepted": 100, "format": "csv"}
 ```
 
 Records may carry their own `timestamp` (ISO 8601 string, epoch seconds, or epoch ms-as-float). If absent, the server stamps `now()` in UTC. `source_id` is required (the upload endpoint accepts a default to apply to records that lack one).

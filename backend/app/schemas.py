@@ -46,6 +46,9 @@ class IngestRecord(BaseModel):
 
 class IngestResponse(BaseModel):
     accepted: int
+    # Populated by /ingest/upload to report which format was used (auto-detected
+    # or explicit). Always null for /ingest.
+    format: str | None = None
 
 
 class SourceOut(BaseModel):

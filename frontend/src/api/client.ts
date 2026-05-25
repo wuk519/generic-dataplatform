@@ -95,14 +95,14 @@ export const api = {
   revokeApiKey: (id: number) =>
     request<void>(`/api-keys/${id}`, { method: "DELETE" }),
 
-  upload: (file: File, sourceId: string, format: string) => {
+  upload: (file: File, sourceId: string, format?: string) => {
     const fd = new FormData();
     fd.append("file", file);
     if (sourceId) fd.append("source_id", sourceId);
-    fd.append("format", format);
-    return request<{ accepted: number }>("/ingest/upload", {
-      method: "POST",
-      body: fd,
-    });
+    if (format) fd.append("format", format);
+    return request<{ accepted: number; format: string | null }>(
+      "/ingest/upload",
+      { method: "POST", body: fd },
+    );
   },
 };

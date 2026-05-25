@@ -3,8 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_admin
-from ..models import Admin, Source
+from ..deps import Principal, get_principal
+from ..models import Source
 from ..schemas import SourceOut
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/sources", tags=["sources"])
 
 @router.get("", response_model=list[SourceOut])
 async def list_sources(
-    _: Admin = Depends(get_current_admin),
+    _: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> list[Source]:
     rows = (

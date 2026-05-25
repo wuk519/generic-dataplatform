@@ -212,7 +212,7 @@ The frontend dev server's port is in `frontend/vite.config.ts` (default 5173) an
 
 ### Ingest
 
-Both endpoints accept either an admin `Authorization: Bearer <jwt>` header **or** an `X-API-Key: <key>` header.
+All ingest and read endpoints accept **either** an admin `Authorization: Bearer <jwt>` header **or** an `X-API-Key: <key>` header. Only admin endpoints (`/auth/*`, `/api-keys`) require JWT.
 
 ```bash
 # Single record
@@ -245,23 +245,30 @@ Records may carry their own `timestamp` (ISO 8601 string, epoch seconds, or epoc
 
 ### Query
 
+You can use the same API key for reads:
+
 ```bash
-# Log in to get a JWT
+# List sources
+curl http://localhost:8000/sources \
+  -H "X-API-Key: dpk_..."
+
+# Events for a source (keyset-paginated)
+curl "http://localhost:8000/sources/web-prod/events?limit=10" \
+  -H "X-API-Key: dpk_..."
+
+# Time-bucketed counts (for charts)
+curl "http://localhost:8000/sources/web-prod/stats?bucket=hour" \
+  -H "X-API-Key: dpk_..."
+```
+
+Or use the admin JWT — get one with:
+
+```bash
 TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"changeme"}' | jq -r .access_token)
 
-# List sources
-curl http://localhost:8000/sources \
-  -H "Authorization: Bearer $TOKEN"
-
-# Events for a source (keyset-paginated)
-curl "http://localhost:8000/sources/web-prod/events?limit=10" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Time-bucketed counts (for charts)
-curl "http://localhost:8000/sources/web-prod/stats?bucket=hour" \
-  -H "Authorization: Bearer $TOKEN"
+curl http://localhost:8000/sources -H "Authorization: Bearer $TOKEN"
 ```
 
 Pass `?cursor=...` from the previous response's `next_cursor` to keep paging.

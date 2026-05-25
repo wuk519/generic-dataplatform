@@ -8,8 +8,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import get_current_admin
-from ..models import Admin, Event
+from ..deps import Principal, get_principal
+from ..models import Event
 from ..schemas import EventsPage, StatPoint
 
 router = APIRouter(tags=["events"])
@@ -36,7 +36,7 @@ async def list_events(
     to: datetime | None = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     cursor: str | None = None,
-    _: Admin = Depends(get_current_admin),
+    _: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> EventsPage:
     stmt = select(Event).where(Event.source_id == source_id)
@@ -71,7 +71,7 @@ async def stats(
     from_: datetime | None = Query(None, alias="from"),
     to: datetime | None = Query(None),
     bucket: Bucket = Query("hour"),
-    _: Admin = Depends(get_current_admin),
+    _: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> list[StatPoint]:
     bucket_col = func.date_trunc(bucket, Event.timestamp).label("ts")

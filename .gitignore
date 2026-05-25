@@ -16,6 +16,9 @@ frontend/dist/
 # Distribution archives produced by package.py
 dist/
 
+# Claude Code project-local settings
+.claude/
+
 # IDE
 .idea/
 .vscode/

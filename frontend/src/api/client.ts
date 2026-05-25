@@ -51,7 +51,7 @@ export type EventQuery = {
 export type ApiKey = {
   id: number;
   name: string;
-  prefix: string;
+  key: string;
   created_at: string;
   last_used_at: string | null;
 };
@@ -87,7 +87,7 @@ export const api = {
 
   listApiKeys: () => request<ApiKey[]>("/api-keys"),
   createApiKey: (name: string) =>
-    request<ApiKey & { key: string }>("/api-keys", {
+    request<ApiKey>("/api-keys", {
       method: "POST",
       body: JSON.stringify({ name }),
     }),

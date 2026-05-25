@@ -33,21 +33,40 @@ async def _bootstrap_admin() -> None:
         print(f"[bootstrap] Created admin user '{settings.admin_username}'")
 
 
-async def _apply_schema_patches(conn) -> None:
-    """Drop columns that were removed from the model.
+async def _migrate_schema(conn) -> None:
+    """Apply one-shot schema patches to upgraded databases.
 
-    SQLAlchemy's `create_all` adds tables/columns but never alters or removes
-    existing ones, so when we drop a column from a model it persists in any
-    pre-existing database. Each statement is idempotent (`IF EXISTS`).
+    SQLAlchemy's `create_all` only adds new things; it never alters or removes
+    existing columns. So when the model changes, we patch existing DBs here.
+    All statements are idempotent and run before `create_all`.
     """
+    table_exists = await conn.scalar(text("SELECT to_regclass('api_keys') IS NOT NULL"))
+    if not table_exists:
+        return
+
+    # v0.4.0: stopped hashing API keys (`key_hash`/`prefix` columns → single
+    # plaintext `key` column). The full key isn't recoverable from the hash,
+    # so the cleanest migration is to drop and recreate — all existing keys
+    # become invalid and the user creates new ones.
+    has_old_schema = await conn.scalar(
+        text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'api_keys' AND column_name = 'key_hash'"
+        )
+    )
+    if has_old_schema:
+        await conn.execute(text("DROP TABLE api_keys"))
+        return
+
+    # v0.3.1: dropped `revoked` column from ApiKey model.
     await conn.execute(text("ALTER TABLE api_keys DROP COLUMN IF EXISTS revoked"))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
+        await _migrate_schema(conn)
         await conn.run_sync(Base.metadata.create_all)
-        await _apply_schema_patches(conn)
     await _bootstrap_admin()
     yield
     await engine.dispose()

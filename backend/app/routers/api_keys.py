@@ -27,20 +27,12 @@ async def create_key(
     body: ApiKeyCreate,
     _: Admin = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
-) -> ApiKeyCreated:
-    full, prefix, key_hash = generate_api_key()
-    row = ApiKey(name=body.name, prefix=prefix, key_hash=key_hash)
+) -> ApiKey:
+    row = ApiKey(name=body.name, key=generate_api_key())
     db.add(row)
     await db.commit()
     await db.refresh(row)
-    return ApiKeyCreated(
-        id=row.id,
-        name=row.name,
-        prefix=row.prefix,
-        created_at=row.created_at,
-        last_used_at=row.last_used_at,
-        key=full,
-    )
+    return row
 
 
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)

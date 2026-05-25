@@ -23,8 +23,9 @@ class ApiKey(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(128))
-    prefix: Mapped[str] = mapped_column(String(16), index=True)
-    key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    # The full key value, stored as-is so the UI can display it. Security note:
+    # any DB read leaks every key. Intentional tradeoff for local dev visibility.
+    key: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )

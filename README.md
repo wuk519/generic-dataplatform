@@ -4,7 +4,7 @@ A simple, Splunk-like data platform. Push events grouped by `source_id` over HTT
 
 - **Backend** — FastAPI + SQLAlchemy 2.0 async + PostgreSQL (JSONB), packaged as `dataplatform-backend`
 - **Frontend** — React + Vite + TypeScript + Tailwind + TanStack Query
-- **Auth** — admin JWT for the UI; SHA-256-hashed API keys for programmatic ingest
+- **Auth** — admin JWT for the UI; plaintext-stored API keys for programmatic ingest (visible in the UI)
 - **Index** — `events(source_id, timestamp)` btree → fast source + time-range queries even at millions of rows
 
 ---
@@ -126,7 +126,7 @@ Open <http://localhost:5173>. Sign in:
 
 Once signed in:
 
-1. Go to **API Keys** → *Create key* (name it e.g. `dev`). **Copy the key shown — it's only displayed once.**
+1. Go to **API Keys** → *Create key* (name it e.g. `dev`). The full key is visible on the list page — click **Show** to reveal, **Copy** to copy.
 2. Push some test data from another terminal:
 
    ```bash
@@ -281,7 +281,7 @@ backend/
     db.py              # async engine + Base + get_db
     models.py          # Admin, ApiKey, Source, Event
     schemas.py         # Pydantic v2 request/response models
-    auth.py            # bcrypt passwords, JWT, API-key gen + sha256 hash
+    auth.py            # bcrypt passwords, JWT, API-key generation
     deps.py            # get_current_admin, get_principal (JWT or API key)
     ingest_core.py     # normalize_record + insert_batch (with source upsert)
     routers/
@@ -314,7 +314,7 @@ dev.py                 # cross-platform runner (Postgres + backend + frontend)
 
 ```
 admin       (id, username, password_hash, created_at)
-api_keys    (id, name, prefix, key_hash UNIQUE, created_at, last_used_at, revoked)
+api_keys    (id, name, key UNIQUE, created_at, last_used_at)
 sources     (source_id PK, first_seen, last_seen, event_count)
 events      (id BIGSERIAL, source_id FK, timestamp, payload JSONB, ingested_at)
             INDEX (source_id, timestamp)
@@ -327,7 +327,7 @@ Tables are created automatically on first backend startup via `Base.metadata.cre
 ## Scaling notes
 
 - The `(source_id, timestamp)` btree handles all source-filtered, time-bounded queries.
-- API keys are looked up by indexed SHA-256 hash — O(1), fast enough for high-throughput ingest. (bcrypt would be a per-request bottleneck.)
+- API keys are stored as plaintext and looked up via a unique btree index — O(1), fast enough for high-throughput ingest. The full key is visible in the UI; this trades against DB-leak resistance and is appropriate for local / single-admin use only.
 - File uploads stream and commit in 1000-record batches; the batch ingest endpoint chunks the same way.
 - Pagination is keyset, never `OFFSET`.
 - For ad-hoc filtering inside JSON payloads (e.g. `payload->>'level' = 'ERROR'`), add a GIN index on `events.payload`. Skipped by default to keep ingest fast.

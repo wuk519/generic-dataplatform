@@ -1,4 +1,3 @@
-import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -35,13 +34,6 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
 
 
-def hash_api_key(key: str) -> str:
-    return hashlib.sha256(key.encode()).hexdigest()
-
-
-def generate_api_key() -> tuple[str, str, str]:
-    """Returns (full_key, display_prefix, sha256_hash). Full key is shown once."""
-    raw = secrets.token_urlsafe(32)
-    full = API_KEY_PREFIX + raw
-    prefix = full[:12]
-    return full, prefix, hash_api_key(full)
+def generate_api_key() -> str:
+    """Return a fresh API key string (e.g. `dpk_<32-bytes-base64url>`)."""
+    return API_KEY_PREFIX + secrets.token_urlsafe(32)

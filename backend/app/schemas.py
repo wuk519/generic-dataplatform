@@ -27,13 +27,14 @@ class ApiKeyOut(BaseModel):
 
     id: int
     name: str
-    prefix: str
+    key: str
     created_at: datetime
     last_used_at: datetime | None
 
 
-class ApiKeyCreated(ApiKeyOut):
-    key: str  # full key, shown once
+# Kept for backwards compatibility — same shape as ApiKeyOut now that the full
+# key is always returned.
+ApiKeyCreated = ApiKeyOut
 
 
 class IngestRecord(BaseModel):

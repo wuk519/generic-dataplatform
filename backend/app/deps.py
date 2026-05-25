@@ -2,7 +2,7 @@ from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .auth import decode_token, hash_api_key
+from .auth import decode_token
 from .db import get_db
 from .models import Admin, ApiKey
 
@@ -29,9 +29,8 @@ async def _resolve_admin(authorization: str, db: AsyncSession) -> Admin:
 
 
 async def _resolve_api_key(x_api_key: str, db: AsyncSession) -> ApiKey:
-    key_hash = hash_api_key(x_api_key)
     api_key = (
-        await db.execute(select(ApiKey).where(ApiKey.key_hash == key_hash))
+        await db.execute(select(ApiKey).where(ApiKey.key == x_api_key))
     ).scalar_one_or_none()
     if not api_key:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid API key")

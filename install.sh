@@ -96,20 +96,10 @@ cat <<EOF
 
 ${GREEN}${BOLD}Setup complete.${RESET}
 
-${BOLD}Next steps${RESET} (3 terminals):
+${BOLD}Next step${RESET} — start everything (Postgres + backend + frontend):
 
-  ${DIM}# 1. Start Postgres${RESET}
-  docker compose up -d
-
-  ${DIM}# 2. Backend${RESET}
-  cd backend
-  source .venv/bin/activate
-  python -m scripts.create_admin admin changeme
-  uvicorn app.main:app --reload
-
-  ${DIM}# 3. Frontend${RESET}
-  cd frontend
-  npm run dev
+  python dev.py
 
 Then open ${BOLD}http://localhost:5173${RESET} and sign in as ${BOLD}admin / changeme${RESET}.
+Press ${BOLD}Ctrl-C${RESET} in that terminal to stop the backend and frontend.
 EOF

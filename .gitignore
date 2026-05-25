@@ -13,6 +13,9 @@ frontend/dist/
 .env
 .env.local
 
+# Distribution archives produced by package.py
+dist/
+
 # IDE
 .idea/
 .vscode/

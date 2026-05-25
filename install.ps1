@@ -115,19 +115,9 @@ try {
 Write-Host ""
 Write-Host "Setup complete." -ForegroundColor Green
 Write-Host ""
-Write-Host "Next steps (3 terminals):" -ForegroundColor White
+Write-Host "Next step - start everything (Postgres + backend + frontend):" -ForegroundColor White
 Write-Host ""
-Write-Host "  # 1. Start Postgres" -ForegroundColor DarkGray
-Write-Host "  docker compose up -d"
-Write-Host ""
-Write-Host "  # 2. Backend" -ForegroundColor DarkGray
-Write-Host "  cd backend"
-Write-Host "  .venv\Scripts\Activate.ps1"
-Write-Host "  python -m scripts.create_admin admin changeme"
-Write-Host "  uvicorn app.main:app --reload"
-Write-Host ""
-Write-Host "  # 3. Frontend" -ForegroundColor DarkGray
-Write-Host "  cd frontend"
-Write-Host "  npm run dev"
+Write-Host "  python dev.py"
 Write-Host ""
 Write-Host "Then open http://localhost:5173 and sign in as admin / changeme." -ForegroundColor White
+Write-Host "Press Ctrl-C in that terminal to stop the backend and frontend." -ForegroundColor White

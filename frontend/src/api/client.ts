@@ -54,7 +54,6 @@ export type ApiKey = {
   prefix: string;
   created_at: string;
   last_used_at: string | null;
-  revoked: boolean;
 };
 
 export type StatPoint = { ts: string; count: number };
@@ -92,7 +91,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ name }),
     }),
-  revokeApiKey: (id: number) =>
+  deleteApiKey: (id: number) =>
     request<void>(`/api-keys/${id}`, { method: "DELETE" }),
 
   upload: (file: File, sourceId: string, format?: string) => {

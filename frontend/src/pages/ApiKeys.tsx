@@ -19,10 +19,20 @@ export default function ApiKeys() {
       qc.invalidateQueries({ queryKey: ["api-keys"] });
     },
   });
-  const revoke = useMutation({
-    mutationFn: (id: number) => api.revokeApiKey(id),
+  const remove = useMutation({
+    mutationFn: (id: number) => api.deleteApiKey(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["api-keys"] }),
   });
+
+  function handleDelete(id: number, name: string) {
+    if (
+      window.confirm(
+        `Delete API key "${name}"? Any client still using this key will start failing with 401.`,
+      )
+    ) {
+      remove.mutate(id);
+    }
+  }
 
   return (
     <div className="space-y-4 max-w-3xl">
@@ -52,11 +62,21 @@ export default function ApiKeys() {
       {newKey && (
         <div className="bg-amber-50 border border-amber-300 rounded p-4">
           <div className="text-sm font-medium text-amber-900 mb-1">
-            Copy this key — it will not be shown again.
+            Copy this key — it will not be shown again. The server only stores a
+            SHA-256 hash; there's no way to recover it later.
           </div>
-          <code className="block bg-white border rounded px-3 py-2 font-mono text-sm break-all">
-            {newKey}
-          </code>
+          <div className="flex gap-2 items-stretch">
+            <code className="flex-1 bg-white border rounded px-3 py-2 font-mono text-sm break-all">
+              {newKey}
+            </code>
+            <button
+              onClick={() => navigator.clipboard.writeText(newKey)}
+              className="px-3 py-2 text-sm bg-amber-100 border border-amber-300 rounded hover:bg-amber-200"
+              type="button"
+            >
+              Copy
+            </button>
+          </div>
           <button
             onClick={() => setNewKey(null)}
             className="mt-2 text-sm text-amber-900 underline"
@@ -74,7 +94,6 @@ export default function ApiKeys() {
               <th className="text-left px-4 py-2">Prefix</th>
               <th className="text-left px-4 py-2">Created</th>
               <th className="text-left px-4 py-2">Last used</th>
-              <th className="text-left px-4 py-2">Status</th>
               <th />
             </tr>
           </thead>
@@ -82,7 +101,7 @@ export default function ApiKeys() {
             {data && data.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={5}
                   className="px-4 py-6 text-center text-slate-500"
                 >
                   No API keys yet
@@ -101,22 +120,14 @@ export default function ApiKeys() {
                     ? new Date(k.last_used_at).toLocaleString()
                     : "—"}
                 </td>
-                <td className="px-4 py-2">
-                  {k.revoked ? (
-                    <span className="text-red-700">Revoked</span>
-                  ) : (
-                    <span className="text-emerald-700">Active</span>
-                  )}
-                </td>
                 <td className="px-4 py-2 text-right">
-                  {!k.revoked && (
-                    <button
-                      onClick={() => revoke.mutate(k.id)}
-                      className="text-red-600 hover:underline text-sm"
-                    >
-                      Revoke
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleDelete(k.id, k.name)}
+                    disabled={remove.isPending}
+                    className="text-red-600 hover:underline text-sm disabled:opacity-40"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}

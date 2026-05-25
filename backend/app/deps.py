@@ -31,9 +31,7 @@ async def _resolve_admin(authorization: str, db: AsyncSession) -> Admin:
 async def _resolve_api_key(x_api_key: str, db: AsyncSession) -> ApiKey:
     key_hash = hash_api_key(x_api_key)
     api_key = (
-        await db.execute(
-            select(ApiKey).where(ApiKey.key_hash == key_hash, ApiKey.revoked.is_(False))
-        )
+        await db.execute(select(ApiKey).where(ApiKey.key_hash == key_hash))
     ).scalar_one_or_none()
     if not api_key:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid API key")

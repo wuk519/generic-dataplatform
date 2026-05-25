@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, String, func
+from sqlalchemy import BigInteger, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,7 +29,6 @@ class ApiKey(Base):
         TIMESTAMP(timezone=True), server_default=func.now()
     )
     last_used_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
-    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Source(Base):

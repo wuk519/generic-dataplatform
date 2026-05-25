@@ -39,13 +39,12 @@ async def create_key(
         prefix=row.prefix,
         created_at=row.created_at,
         last_used_at=row.last_used_at,
-        revoked=row.revoked,
         key=full,
     )
 
 
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def revoke_key(
+async def delete_key(
     key_id: int,
     _: Admin = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
@@ -53,5 +52,5 @@ async def revoke_key(
     row = await db.get(ApiKey, key_id)
     if not row:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
-    row.revoked = True
+    await db.delete(row)
     await db.commit()

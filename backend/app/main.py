@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from . import __version__
 from .auth import hash_password
@@ -33,10 +33,21 @@ async def _bootstrap_admin() -> None:
         print(f"[bootstrap] Created admin user '{settings.admin_username}'")
 
 
+async def _apply_schema_patches(conn) -> None:
+    """Drop columns that were removed from the model.
+
+    SQLAlchemy's `create_all` adds tables/columns but never alters or removes
+    existing ones, so when we drop a column from a model it persists in any
+    pre-existing database. Each statement is idempotent (`IF EXISTS`).
+    """
+    await conn.execute(text("ALTER TABLE api_keys DROP COLUMN IF EXISTS revoked"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await _apply_schema_patches(conn)
     await _bootstrap_admin()
     yield
     await engine.dispose()

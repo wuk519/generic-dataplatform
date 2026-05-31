@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app.auth import hash_password
 from app.db import Base, SessionLocal, engine
-from app.models import Admin
+from app.models import User
 
 
 async def main(username: str, password: str) -> None:
@@ -17,13 +17,22 @@ async def main(username: str, password: str) -> None:
         await conn.run_sync(Base.metadata.create_all)
     async with SessionLocal() as db:
         existing = (
-            await db.execute(select(Admin).where(Admin.username == username))
+            await db.execute(select(User).where(User.username == username))
         ).scalar_one_or_none()
         if existing:
             existing.password_hash = hash_password(password)
-            print(f"Updated password for admin '{username}'")
+            existing.role = "admin"
+            existing.is_active = True
+            print(f"Updated admin '{username}'")
         else:
-            db.add(Admin(username=username, password_hash=hash_password(password)))
+            db.add(
+                User(
+                    username=username,
+                    password_hash=hash_password(password),
+                    role="admin",
+                    is_active=True,
+                )
+            )
             print(f"Created admin '{username}'")
         await db.commit()
 

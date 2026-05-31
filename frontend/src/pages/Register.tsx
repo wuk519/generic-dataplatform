@@ -5,7 +5,7 @@ import { setToken } from "../lib/auth";
 import { PulseIcon } from "../components/icons";
 import { Spinner } from "../components/ui";
 
-export default function Login() {
+export default function Register() {
   const nav = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -17,11 +17,11 @@ export default function Login() {
     setErr(null);
     setLoading(true);
     try {
-      const { access_token } = await api.login(username, password);
+      const { access_token } = await api.register(username, password);
       setToken(access_token);
       nav("/sources");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Login failed");
+      setErr(e instanceof Error ? e.message : "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -29,7 +29,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-slate-50">
-      {/* Brand panel */}
       <div className="hidden lg:flex flex-col justify-between bg-slate-900 text-white p-12 relative overflow-hidden">
         <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-600/30 blur-3xl" />
         <div className="absolute bottom-0 -left-24 h-72 w-72 rounded-full bg-indigo-600/20 blur-3xl" />
@@ -41,35 +40,30 @@ export default function Login() {
         </div>
         <div className="relative">
           <h2 className="text-3xl font-semibold leading-tight">
-            Ingest anything.
-            <br />
-            Query everything.
+            Create your account
           </h2>
           <p className="mt-3 text-slate-400 max-w-sm">
-            A lightweight, Splunk-style platform for collecting and exploring
-            event data grouped by source.
+            Register to start uploading data sources and issuing API keys. You'll
+            only see the data you own.
           </p>
         </div>
-        <div className="relative text-sm text-slate-500">
-          Local data platform
-        </div>
+        <div className="relative text-sm text-slate-500">Local data platform</div>
       </div>
 
-      {/* Form panel */}
       <div className="flex items-center justify-center p-6">
         <form onSubmit={submit} className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
               <PulseIcon width={20} height={20} />
             </div>
-            <span className="text-lg font-semibold text-slate-900">
-              DataScope
-            </span>
+            <span className="text-lg font-semibold text-slate-900">DataScope</span>
           </div>
 
-          <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Create account
+          </h1>
           <p className="text-sm text-slate-500 mt-1 mb-6">
-            Welcome back. Enter your admin credentials.
+            Pick a username and password.
           </p>
 
           <div className="space-y-3">
@@ -83,6 +77,7 @@ export default function Login() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                minLength={3}
               />
             </div>
             <div>
@@ -92,11 +87,13 @@ export default function Login() {
               <input
                 className="input"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
+              <p className="text-xs text-slate-400 mt-1">At least 6 characters.</p>
             </div>
           </div>
 
@@ -106,23 +103,20 @@ export default function Login() {
             </div>
           )}
 
-          <button
-            disabled={loading}
-            className="btn-primary w-full mt-5 py-2.5"
-          >
+          <button disabled={loading} className="btn-primary w-full mt-5 py-2.5">
             {loading ? (
               <>
-                <Spinner /> Signing in…
+                <Spinner /> Creating…
               </>
             ) : (
-              "Sign in"
+              "Create account"
             )}
           </button>
 
           <p className="text-sm text-slate-500 mt-4 text-center">
-            No account?{" "}
-            <Link to="/register" className="text-violet-700 hover:underline">
-              Create one
+            Already have an account?{" "}
+            <Link to="/login" className="text-violet-700 hover:underline">
+              Sign in
             </Link>
           </p>
         </form>

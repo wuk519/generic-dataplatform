@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, type Source } from "../api/client";
 import { compactNumber, formatNumber, relativeTime } from "../lib/format";
+import { useMe } from "../lib/useMe";
 import {
   ConfirmDialog,
   EmptyState,
@@ -20,6 +21,8 @@ import {
 
 export default function Sources() {
   const qc = useQueryClient();
+  const { data: me } = useMe();
+  const isAdmin = me?.role === "admin";
   const { data, isLoading, error } = useQuery({
     queryKey: ["sources"],
     queryFn: api.listSources,
@@ -134,6 +137,7 @@ export default function Sources() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="th">Source ID</th>
+                    {isAdmin && <th className="th">Owner</th>}
                     <th className="th text-right">Events</th>
                     <th className="th">First seen</th>
                     <th className="th">Last seen</th>
@@ -162,6 +166,11 @@ export default function Sources() {
                           </div>
                         )}
                       </td>
+                      {isAdmin && (
+                        <td className="td text-slate-500">
+                          {s.owner ?? "—"}
+                        </td>
+                      )}
                       <td className="td text-right tabular-nums font-medium">
                         {formatNumber(s.event_count)}
                       </td>

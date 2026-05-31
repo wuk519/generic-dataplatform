@@ -4,7 +4,8 @@ A simple, Splunk-like data platform. Push events grouped by `source_id` over HTT
 
 - **Backend** — FastAPI + SQLAlchemy 2.0 async + PostgreSQL (JSONB), packaged as `dataplatform-backend`
 - **Frontend** — React + Vite + TypeScript + Tailwind + TanStack Query
-- **Auth** — admin JWT for the UI; plaintext-stored API keys for programmatic ingest (visible in the UI)
+- **Accounts** — multi-user with roles: **admins** see and manage everything (all data + user accounts); **users** self-register and see only the sources and API keys they own
+- **Auth** — JWT for the UI; plaintext-stored API keys for programmatic ingest (scoped to the key owner)
 - **Index** — `events(source_id, timestamp)` btree → fast source + time-range queries even at millions of rows
 
 ---
@@ -122,6 +123,28 @@ Open <http://localhost:5173>. Sign in:
 
 (These are the defaults in `backend/.env`. Change them — see [Customizing](#customizing) below.)
 
+This first account is the **admin**. Other people can create their own
+(regular) accounts from the **Create one** link on the sign-in page.
+
+---
+
+## Accounts & roles
+
+- **Admin** — sees and manages *all* sources, API keys, and events, and manages
+  user accounts (the **Users** page in the sidebar). The bootstrap account from
+  `backend/.env` is an admin.
+- **User** — self-registers, then uploads sources and creates API keys. A user
+  only ever sees their *own* sources, events, and API keys.
+- **Ownership** — a source is owned by whoever first ingests it; its events and
+  the API key used inherit that owner. `source_id` is a global name, so a
+  second user can't ingest into or claim a source someone else already owns
+  (they get a 403).
+- **API keys** are scoped to their owner — a key only reads/writes its owner's
+  data, never everything, even if the owner is an admin.
+
+Admin-only API endpoints (JWT required): `/users` (CRUD). Everything else
+accepts a JWT or an API key, scoped to the caller.
+
 ---
 
 ## Step 5 — Try it
@@ -214,7 +237,7 @@ The frontend dev server's port is in `frontend/vite.config.ts` (default 5173) an
 
 ### Ingest
 
-All ingest and read endpoints accept **either** an admin `Authorization: Bearer <jwt>` header **or** an `X-API-Key: <key>` header. Admin-only endpoints require JWT: `/auth/*`, `/api-keys`, and `DELETE /sources/{id}` (deleting a source and its events is destructive, so an API key can't do it).
+Ingest and read endpoints accept **either** a `Authorization: Bearer <jwt>` header **or** an `X-API-Key: <key>` header, scoped to the caller (a key only sees its owner's data). `/api-keys` management requires a JWT (you manage your own keys). `/users` is admin-only. All results are owner-scoped automatically; admins see everything.
 
 ```bash
 # Single record
@@ -332,14 +355,15 @@ backend/
     main.py            # FastAPI app + lifespan (create_all + admin bootstrap)
     config.py          # pydantic-settings, reads .env
     db.py              # async engine + Base + get_db
-    models.py          # Admin, ApiKey, Source, Event
+    models.py          # User, ApiKey, Source, Event
     schemas.py         # Pydantic v2 request/response models
     auth.py            # bcrypt passwords, JWT, API-key generation
     deps.py            # get_current_admin, get_principal (JWT or API key)
     ingest_core.py     # normalize_record, insert_batch, scalar type-inference
     routers/
-      auth.py          # POST /auth/login, GET /auth/me
-      api_keys.py      # CRUD on /api-keys (admin-only)
+      auth.py          # POST /auth/register, /auth/login, GET /auth/me
+      users.py         # CRUD on /users (admin-only)
+      api_keys.py      # CRUD on /api-keys (owner-scoped)
       ingest.py        # POST /ingest, POST /ingest/upload (csv/tsv/json/ndjson/xlsx/gz)
       sources.py       # GET /sources, PATCH /sources/{id}, DELETE /sources/{id}
       events.py        # GET /sources/{id}/events, /stats
@@ -354,7 +378,7 @@ frontend/
     api/client.ts      # typed fetch wrapper
     lib/{auth.ts, format.ts}
     components/         # Layout, icons, ui, BarChart, ScatterChart, AnalysisPanel
-    pages/             # Login, Sources, SourceDetail, Upload, ApiKeys
+    pages/             # Login, Register, Sources, SourceDetail, Upload, ApiKeys, Users
   package.json, vite.config.ts, tailwind.config.ts, tsconfig.json
 docker-compose.yml     # postgres only
 install.sh             # one-shot setup (macOS / Ubuntu)
@@ -367,9 +391,9 @@ dev.py                 # cross-platform runner (Postgres + backend + frontend)
 ## Schema
 
 ```
-admin       (id, username, password_hash, created_at)
-api_keys    (id, name, key UNIQUE, created_at, last_used_at)
-sources     (source_id PK, description, first_seen, last_seen, event_count)
+users       (id, username UNIQUE, password_hash, role, is_active, created_at)
+api_keys    (id, name, key UNIQUE, owner_id FK->users, created_at, last_used_at)
+sources     (source_id PK, description, owner_id FK->users, first_seen, last_seen, event_count)
 events      (id BIGSERIAL, source_id FK, timestamp, payload JSONB, ingested_at)
             INDEX (source_id, timestamp)
 ```
@@ -432,5 +456,6 @@ Or wipe the DB to start over: `docker compose down -v`, then `python dev.py`.
 
 - Cross-source search / full-text search.
 - Alerting, retention policies.
-- Multi-user / RBAC.
-- Alembic migrations (`Base.metadata.create_all` is used today; add Alembic before any schema change in production).
+- Fine-grained sharing (a source is visible to its owner and admins only — no per-source ACLs or teams).
+- Email verification / password reset flows (admins can reset passwords from the Users page).
+- Alembic migrations (`Base.metadata.create_all` plus small idempotent patches in the app lifespan are used today; add Alembic before any serious schema change in production).

@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import Principal, get_principal
+from ..deps import Principal, assert_source_access, get_principal
 from ..models import Event
 from ..schemas import EventsPage, StatPoint
 
@@ -36,9 +36,10 @@ async def list_events(
     to: datetime | None = Query(None),
     limit: int = Query(100, ge=1, le=1000),
     cursor: str | None = None,
-    _: Principal = Depends(get_principal),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> EventsPage:
+    await assert_source_access(db, source_id, principal)
     stmt = select(Event).where(Event.source_id == source_id)
     if from_:
         stmt = stmt.where(Event.timestamp >= from_)
@@ -71,9 +72,10 @@ async def stats(
     from_: datetime | None = Query(None, alias="from"),
     to: datetime | None = Query(None),
     bucket: Bucket = Query("hour"),
-    _: Principal = Depends(get_principal),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> list[StatPoint]:
+    await assert_source_access(db, source_id, principal)
     bucket_col = func.date_trunc(bucket, Event.timestamp).label("ts")
     stmt = (
         select(bucket_col, func.count().label("count"))

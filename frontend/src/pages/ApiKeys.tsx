@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ApiKey } from "../api/client";
 import { relativeTime } from "../lib/format";
+import { useMe } from "../lib/useMe";
 import {
   ConfirmDialog,
   EmptyState,
@@ -17,6 +18,8 @@ function maskKey(key: string): string {
 
 export default function ApiKeys() {
   const qc = useQueryClient();
+  const { data: me } = useMe();
+  const isAdmin = me?.role === "admin";
   const { data } = useQuery({
     queryKey: ["api-keys"],
     queryFn: api.listApiKeys,
@@ -91,6 +94,7 @@ export default function ApiKeys() {
             <thead className="bg-slate-50">
               <tr>
                 <th className="th w-40">Name</th>
+                {isAdmin && <th className="th">Owner</th>}
                 <th className="th">Key</th>
                 <th className="th">Created</th>
                 <th className="th">Last used</th>
@@ -103,6 +107,9 @@ export default function ApiKeys() {
                 return (
                   <tr key={k.id} className="border-t border-slate-100">
                     <td className="td font-medium">{k.name}</td>
+                    {isAdmin && (
+                      <td className="td text-slate-500">{k.owner ?? "—"}</td>
+                    )}
                     <td className="td">
                       <div className="flex items-center gap-2">
                         <code className="font-mono text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 break-all">

@@ -24,9 +24,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
+export type Me = { id: number; username: string; role: "admin" | "user" };
+
+export type User = {
+  id: number;
+  username: string;
+  role: "admin" | "user";
+  is_active: boolean;
+  created_at: string;
+};
+
 export type Source = {
   source_id: string;
   description: string | null;
+  owner_id: number | null;
+  owner: string | null;
   first_seen: string;
   last_seen: string;
   event_count: number;
@@ -53,6 +65,8 @@ export type ApiKey = {
   id: number;
   name: string;
   key: string;
+  owner_id: number | null;
+  owner: string | null;
   created_at: string;
   last_used_at: string | null;
 };
@@ -90,7 +104,29 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ username, password }),
     }),
-  me: () => request<{ username: string }>("/auth/me"),
+  register: (username: string, password: string) =>
+    request<{ access_token: string }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    }),
+  me: () => request<Me>("/auth/me"),
+
+  listUsers: () => request<User[]>("/users"),
+  createUser: (username: string, password: string, role: "admin" | "user") =>
+    request<User>("/users", {
+      method: "POST",
+      body: JSON.stringify({ username, password, role }),
+    }),
+  updateUser: (
+    id: number,
+    patch: { role?: "admin" | "user"; is_active?: boolean; password?: string },
+  ) =>
+    request<User>(`/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
+  deleteUser: (id: number) =>
+    request<void>(`/users/${id}`, { method: "DELETE" }),
 
   listSources: () => request<Source[]>("/sources"),
   deleteSource: (sourceId: string) =>

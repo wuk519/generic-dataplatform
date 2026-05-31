@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,8 +93,34 @@ async def set_source_descriptions(
     )
 
 
-async def insert_batch(db: AsyncSession, rows: list[dict]) -> None:
-    """Insert a batch of normalized event rows and upsert their source aggregates."""
+async def sources_owned_by_others(
+    db: AsyncSession, source_ids: set[str], acting_user_id: int | None
+) -> list[str]:
+    """Return source_ids that already exist and belong to a different owner.
+
+    `source_id` is a global namespace; this stops one user from ingesting into
+    (or claiming) another user's source.
+    """
+    if not source_ids:
+        return []
+    rows = (
+        await db.execute(
+            select(Source.source_id, Source.owner_id).where(
+                Source.source_id.in_(source_ids)
+            )
+        )
+    ).all()
+    return [sid for sid, owner in rows if owner is not None and owner != acting_user_id]
+
+
+async def insert_batch(
+    db: AsyncSession, rows: list[dict], owner_id: int | None = None
+) -> None:
+    """Insert a batch of normalized event rows and upsert their source aggregates.
+
+    New sources are created owned by `owner_id`; existing sources keep their
+    current owner (owner is not overwritten on conflict).
+    """
     if not rows:
         return
 
@@ -111,7 +137,11 @@ async def insert_batch(db: AsyncSession, rows: list[dict]) -> None:
     # Upsert sources first so the FK on events succeeds for new sources.
     for src, (mn, mx, c) in by_src.items():
         stmt = pg_insert(Source).values(
-            source_id=src, first_seen=mn, last_seen=mx, event_count=c
+            source_id=src,
+            owner_id=owner_id,
+            first_seen=mn,
+            last_seen=mx,
+            event_count=c,
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=["source_id"],

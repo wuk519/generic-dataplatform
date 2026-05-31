@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import Principal, get_principal
+from ..deps import Principal, assert_source_access, get_principal
 from ..models import Event
 from ..schemas import FieldsResponse, FieldStat, NumericStats, SeriesResponse
 
@@ -31,10 +31,11 @@ def _is_number(v: object) -> bool:
 @router.get("/sources/{source_id}/fields", response_model=FieldsResponse)
 async def profile_fields(
     source_id: str,
-    _: Principal = Depends(get_principal),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> FieldsResponse:
     """Profile the top-level payload fields of a source's recent events."""
+    await assert_source_access(db, source_id, principal)
     stmt = (
         select(Event.payload)
         .where(Event.source_id == source_id)
@@ -111,10 +112,11 @@ async def series(
     from_: datetime | None = Query(None, alias="from"),
     to: datetime | None = Query(None),
     limit: int = Query(2000, ge=1, le=SERIES_MAX),
-    _: Principal = Depends(get_principal),
+    principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> SeriesResponse:
     """Return selected payload fields per event, time-ordered, for charting."""
+    await assert_source_access(db, source_id, principal)
     names = [f.strip() for f in fields.split(",") if f.strip()]
     if not names:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No fields requested")

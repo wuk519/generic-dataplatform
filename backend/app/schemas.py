@@ -9,13 +9,42 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=6, max_length=128)
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
 
 class MeResponse(BaseModel):
+    id: int
     username: str
+    role: str
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    role: str
+    is_active: bool
+    created_at: datetime
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=6, max_length=128)
+    role: str = Field(default="user", pattern="^(admin|user)$")
+
+
+class UserUpdate(BaseModel):
+    role: str | None = Field(default=None, pattern="^(admin|user)$")
+    is_active: bool | None = None
+    password: str | None = Field(default=None, min_length=6, max_length=128)
 
 
 class ApiKeyCreate(BaseModel):
@@ -28,6 +57,8 @@ class ApiKeyOut(BaseModel):
     id: int
     name: str
     key: str
+    owner_id: int | None = None
+    owner: str | None = None
     created_at: datetime
     last_used_at: datetime | None
 
@@ -56,6 +87,8 @@ class SourceOut(BaseModel):
 
     source_id: str
     description: str | None = None
+    owner_id: int | None = None
+    owner: str | None = None
     first_seen: datetime
     last_seen: datetime
     event_count: int

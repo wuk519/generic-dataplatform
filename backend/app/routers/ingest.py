@@ -18,7 +18,12 @@ from fastapi import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import Principal, get_principal
+from ..deps import (
+    Principal,
+    acting_user_id,
+    get_principal,
+    is_admin_principal,
+)
 from ..ingest_core import (
     BATCH_SIZE,
     DROP,
@@ -26,6 +31,7 @@ from ..ingest_core import (
     insert_batch,
     normalize_record,
     set_source_descriptions,
+    sources_owned_by_others,
 )
 from ..models import ApiKey
 from ..schemas import IngestRecord, IngestResponse
@@ -152,11 +158,21 @@ async def ingest(
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
 
+    owner = acting_user_id(principal)
+    touched = {r["source_id"] for r in rows}
+    if not is_admin_principal(principal):
+        conflicts = await sources_owned_by_others(db, touched, owner)
+        if conflicts:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                f"Source(s) owned by another user: {', '.join(sorted(conflicts))}",
+            )
+
     for i in range(0, len(rows), BATCH_SIZE):
-        await insert_batch(db, rows[i : i + BATCH_SIZE])
+        await insert_batch(db, rows[i : i + BATCH_SIZE], owner_id=owner)
 
     if description is not None:
-        await set_source_descriptions(db, {r["source_id"] for r in rows}, description)
+        await set_source_descriptions(db, touched, description)
 
     _touch_api_key(principal)
     await db.commit()
@@ -202,11 +218,22 @@ async def upload(
     accepted = 0
     batch: list[dict] = []
     touched: set[str] = set()
+    owner = acting_user_id(principal)
+    is_admin = is_admin_principal(principal)
 
     async def flush() -> None:
         nonlocal accepted, batch
         if batch:
-            await insert_batch(db, batch)
+            if not is_admin:
+                conflicts = await sources_owned_by_others(
+                    db, {r["source_id"] for r in batch}, owner
+                )
+                if conflicts:
+                    raise HTTPException(
+                        status.HTTP_403_FORBIDDEN,
+                        f"Source(s) owned by another user: {', '.join(sorted(conflicts))}",
+                    )
+            await insert_batch(db, batch, owner_id=owner)
             await db.commit()
             accepted += len(batch)
             batch = []

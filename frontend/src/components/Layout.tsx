@@ -1,14 +1,16 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { clearToken } from "../lib/auth";
+import { useMe } from "../lib/useMe";
 import {
   DatabaseIcon,
   KeyIcon,
   LogoutIcon,
   PulseIcon,
   UploadIcon,
+  UsersIcon,
 } from "./icons";
 
-const nav = [
+const baseNav = [
   { to: "/sources", label: "Sources", icon: DatabaseIcon },
   { to: "/upload", label: "Upload", icon: UploadIcon },
   { to: "/api-keys", label: "API Keys", icon: KeyIcon },
@@ -25,6 +27,13 @@ function navClass({ isActive }: { isActive: boolean }) {
 
 export default function Layout() {
   const navigate = useNavigate();
+  const { data: me } = useMe();
+  const isAdmin = me?.role === "admin";
+
+  const nav = isAdmin
+    ? [...baseNav, { to: "/users", label: "Users", icon: UsersIcon }]
+    : baseNav;
+
   return (
     <div className="flex h-screen bg-slate-50">
       <aside className="w-60 shrink-0 flex flex-col bg-slate-900 text-slate-200">
@@ -48,6 +57,16 @@ export default function Layout() {
         </nav>
 
         <div className="border-t border-white/10 p-3">
+          {me && (
+            <div className="px-3 py-2 mb-1">
+              <div className="text-sm font-medium text-white truncate">
+                {me.username}
+              </div>
+              <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                {me.role}
+              </div>
+            </div>
+          )}
           <button
             onClick={() => {
               clearToken();

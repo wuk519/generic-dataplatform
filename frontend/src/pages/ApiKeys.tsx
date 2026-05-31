@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { api, type ApiKey } from "../api/client";
+import { relativeTime } from "../lib/format";
+import {
+  ConfirmDialog,
+  EmptyState,
+  PageHeader,
+  Spinner,
+} from "../components/ui";
+import { CopyIcon, EyeIcon, EyeOffIcon, KeyIcon } from "../components/icons";
 
 function maskKey(key: string): string {
   if (key.length <= 12) return key;
@@ -16,18 +24,22 @@ export default function ApiKeys() {
   const [name, setName] = useState("");
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [justCopied, setJustCopied] = useState<number | null>(null);
+  const [toDelete, setToDelete] = useState<ApiKey | null>(null);
 
   const create = useMutation({
     mutationFn: (n: string) => api.createApiKey(n),
     onSuccess: (k) => {
       setName("");
-      setRevealed((r) => ({ ...r, [k.id]: true })); // reveal the new one immediately
+      setRevealed((r) => ({ ...r, [k.id]: true }));
       qc.invalidateQueries({ queryKey: ["api-keys"] });
     },
   });
   const remove = useMutation({
     mutationFn: (id: number) => api.deleteApiKey(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["api-keys"] }),
+    onSuccess: () => {
+      setToDelete(null);
+      qc.invalidateQueries({ queryKey: ["api-keys"] });
+    },
   });
 
   function copy(id: number, key: string) {
@@ -36,116 +48,135 @@ export default function ApiKeys() {
     window.setTimeout(() => setJustCopied((v) => (v === id ? null : v)), 1200);
   }
 
-  function handleDelete(id: number, keyName: string) {
-    if (
-      window.confirm(
-        `Delete API key "${keyName}"? Any client still using it will start failing with 401.`,
-      )
-    ) {
-      remove.mutate(id);
-    }
-  }
-
   return (
-    <div className="space-y-4 max-w-5xl">
-      <h1 className="text-2xl font-semibold">API Keys</h1>
+    <div>
+      <PageHeader
+        title="API Keys"
+        subtitle="Keys authenticate programmatic ingest and read access."
+      />
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (name) create.mutate(name);
         }}
-        className="bg-white rounded-lg border border-slate-200 p-4 flex gap-2"
+        className="card p-4 flex gap-2 mb-4"
       >
         <input
-          className="flex-1 border rounded px-3 py-2"
+          className="input flex-1"
           placeholder="Key name (e.g. prod-web)"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <button
-          className="bg-slate-900 text-white rounded px-4 py-2 disabled:opacity-40"
-          disabled={!name || create.isPending}
-        >
+        <button className="btn-primary" disabled={!name || create.isPending}>
+          {create.isPending ? <Spinner /> : <KeyIcon width={16} height={16} />}
           Create key
         </button>
       </form>
 
-      <div className="bg-amber-50 border border-amber-200 rounded px-3 py-2 text-xs text-amber-900">
-        Keys are stored in plaintext so they remain visible. Anyone with database
-        access can read them — keep this instance on a trusted machine.
+      <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-4">
+        Keys are stored in plaintext so they stay visible here. Anyone with
+        database access can read them — keep this instance on a trusted machine.
       </div>
 
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-100 text-slate-600">
-            <tr>
-              <th className="text-left px-4 py-2 w-40">Name</th>
-              <th className="text-left px-4 py-2">Key</th>
-              <th className="text-left px-4 py-2">Created</th>
-              <th className="text-left px-4 py-2">Last used</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {data && data.length === 0 && (
+      <div className="card overflow-hidden">
+        {data && data.length === 0 ? (
+          <EmptyState
+            icon={<KeyIcon width={22} height={22} />}
+            title="No API keys yet"
+            description="Create one above to start ingesting data."
+          />
+        ) : (
+          <table className="w-full">
+            <thead className="bg-slate-50">
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
-                  No API keys yet — create one above.
-                </td>
+                <th className="th w-40">Name</th>
+                <th className="th">Key</th>
+                <th className="th">Created</th>
+                <th className="th">Last used</th>
+                <th className="th" />
               </tr>
-            )}
-            {data?.map((k) => {
-              const isRevealed = !!revealed[k.id];
-              return (
-                <tr key={k.id} className="border-t border-slate-100 align-middle">
-                  <td className="px-4 py-2">{k.name}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <code className="font-mono text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 break-all">
-                        {isRevealed ? k.key : maskKey(k.key)}
-                      </code>
+            </thead>
+            <tbody>
+              {data?.map((k) => {
+                const isRevealed = !!revealed[k.id];
+                return (
+                  <tr key={k.id} className="border-t border-slate-100">
+                    <td className="td font-medium">{k.name}</td>
+                    <td className="td">
+                      <div className="flex items-center gap-2">
+                        <code className="font-mono text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 break-all">
+                          {isRevealed ? k.key : maskKey(k.key)}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setRevealed((r) => ({ ...r, [k.id]: !isRevealed }))
+                          }
+                          className="btn-ghost !px-1.5 !py-1 text-slate-400"
+                          title={isRevealed ? "Hide" : "Show"}
+                        >
+                          {isRevealed ? (
+                            <EyeOffIcon width={16} height={16} />
+                          ) : (
+                            <EyeIcon width={16} height={16} />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copy(k.id, k.key)}
+                          className="btn-ghost !px-1.5 !py-1 text-slate-400"
+                          title="Copy"
+                        >
+                          {justCopied === k.id ? (
+                            <span className="text-xs text-emerald-600 px-1">
+                              Copied
+                            </span>
+                          ) : (
+                            <CopyIcon width={16} height={16} />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="td text-slate-500 whitespace-nowrap">
+                      {relativeTime(k.created_at)}
+                    </td>
+                    <td className="td text-slate-500 whitespace-nowrap">
+                      {k.last_used_at ? relativeTime(k.last_used_at) : "—"}
+                    </td>
+                    <td className="td text-right">
                       <button
-                        type="button"
-                        onClick={() =>
-                          setRevealed((r) => ({ ...r, [k.id]: !isRevealed }))
-                        }
-                        className="text-xs text-slate-600 hover:text-slate-900 underline"
+                        onClick={() => setToDelete(k)}
+                        className="text-sm text-rose-600 hover:underline"
                       >
-                        {isRevealed ? "Hide" : "Show"}
+                        Delete
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => copy(k.id, k.key)}
-                        className="text-xs text-slate-600 hover:text-slate-900 underline"
-                      >
-                        {justCopied === k.id ? "Copied" : "Copy"}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2 text-slate-600 whitespace-nowrap">
-                    {new Date(k.created_at).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-2 text-slate-600 whitespace-nowrap">
-                    {k.last_used_at
-                      ? new Date(k.last_used_at).toLocaleString()
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      onClick={() => handleDelete(k.id, k.name)}
-                      disabled={remove.isPending}
-                      className="text-red-600 hover:underline text-sm disabled:opacity-40"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Delete API key?"
+        confirmLabel="Delete key"
+        busy={remove.isPending}
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => toDelete && remove.mutate(toDelete.id)}
+        message={
+          toDelete && (
+            <>
+              Any client still using{" "}
+              <span className="font-medium">"{toDelete.name}"</span> will start
+              failing with 401. This cannot be undone.
+            </>
+          )
+        }
+      />
     </div>
   );
 }

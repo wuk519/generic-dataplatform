@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
+import { PageHeader } from "../components/ui";
+import { UploadIcon } from "../components/icons";
 
 export default function Upload() {
   const [sourceId, setSourceId] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -16,6 +22,7 @@ export default function Upload() {
       const r = await api.upload(file, sourceId);
       const fmt = r.format ? ` as ${r.format.toUpperCase()}` : "";
       setStatus({ ok: true, msg: `Accepted ${r.accepted} record(s)${fmt}.` });
+      setFile(null);
     } catch (e) {
       setStatus({
         ok: false,
@@ -27,56 +34,99 @@ export default function Upload() {
   }
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-2xl font-semibold mb-4">Upload</h1>
-      <form
-        onSubmit={submit}
-        className="space-y-4 bg-white rounded-lg border border-slate-200 p-6"
-      >
+    <div className="max-w-2xl">
+      <PageHeader
+        title="Upload"
+        subtitle="Bulk-load events from a file. Records are grouped by source."
+      />
+
+      <form onSubmit={submit} className="card p-6 space-y-5">
         <div>
-          <label className="block text-sm mb-1">
-            Default source ID{" "}
-            <span className="text-slate-500">
-              (used when records lack one)
-            </span>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Default source ID
           </label>
           <input
-            className="w-full border rounded px-3 py-2"
+            className="input"
             value={sourceId}
             onChange={(e) => setSourceId(e.target.value)}
             placeholder="e.g. web-prod-logs"
           />
-        </div>
-        <div>
-          <label className="block text-sm mb-1">File</label>
-          <input
-            type="file"
-            accept=".csv,.ndjson,.jsonl,.json,text/csv,application/json,application/x-ndjson"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            required
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Format is auto-detected from the file extension
-            (<code>.csv</code>, <code>.ndjson</code>/<code>.jsonl</code>,{" "}
-            <code>.json</code>). CSV values are typed (numbers, booleans,{" "}
-            <code>null</code>) automatically.
+          <p className="text-xs text-slate-400 mt-1">
+            Used for records that don't carry their own <code>source_id</code>.
           </p>
         </div>
-        <button
-          disabled={busy || !file}
-          className="bg-slate-900 text-white rounded px-4 py-2 disabled:opacity-40"
-        >
-          {busy ? "Uploading…" : "Upload"}
-        </button>
-        {status && (
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            File
+          </label>
           <div
-            className={`text-sm ${
-              status.ok ? "text-emerald-700" : "text-red-600"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f) setFile(f);
+            }}
+            className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 cursor-pointer transition-colors ${
+              dragging
+                ? "border-violet-400 bg-violet-50"
+                : "border-slate-300 hover:border-violet-300 hover:bg-slate-50"
             }`}
           >
-            {status.msg}
+            <div className="grid h-11 w-11 place-items-center rounded-full bg-violet-50 text-violet-600">
+              <UploadIcon />
+            </div>
+            {file ? (
+              <div className="text-sm font-medium text-slate-800">
+                {file.name}{" "}
+                <span className="text-slate-400">
+                  ({(file.size / 1024).toFixed(1)} KB)
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="text-sm font-medium text-slate-700">
+                  Drag a file here, or click to browse
+                </div>
+                <div className="text-xs text-slate-400">
+                  CSV, NDJSON / JSONL, or JSON array
+                </div>
+              </>
+            )}
+            <input
+              ref={inputRef}
+              type="file"
+              className="hidden"
+              accept=".csv,.ndjson,.jsonl,.json,text/csv,application/json,application/x-ndjson"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
           </div>
-        )}
+          <p className="text-xs text-slate-400 mt-2">
+            Format is auto-detected from the extension. CSV values are typed
+            (numbers, booleans, <code>null</code>) automatically.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button disabled={busy || !file} className="btn-primary">
+            {busy ? "Uploading…" : "Upload"}
+          </button>
+          {status && (
+            <span
+              className={`text-sm ${
+                status.ok ? "text-emerald-600" : "text-rose-600"
+              }`}
+            >
+              {status.msg}
+            </span>
+          )}
+        </div>
       </form>
     </div>
   );

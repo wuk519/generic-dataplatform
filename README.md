@@ -212,7 +212,7 @@ The frontend dev server's port is in `frontend/vite.config.ts` (default 5173) an
 
 ### Ingest
 
-All ingest and read endpoints accept **either** an admin `Authorization: Bearer <jwt>` header **or** an `X-API-Key: <key>` header. Only admin endpoints (`/auth/*`, `/api-keys`) require JWT.
+All ingest and read endpoints accept **either** an admin `Authorization: Bearer <jwt>` header **or** an `X-API-Key: <key>` header. Admin-only endpoints require JWT: `/auth/*`, `/api-keys`, and `DELETE /sources/{id}` (deleting a source and its events is destructive, so an API key can't do it).
 
 ```bash
 # Single record

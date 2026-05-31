@@ -67,6 +67,10 @@ export const api = {
   me: () => request<{ username: string }>("/auth/me"),
 
   listSources: () => request<Source[]>("/sources"),
+  deleteSource: (sourceId: string) =>
+    request<void>(`/sources/${encodeURIComponent(sourceId)}`, {
+      method: "DELETE",
+    }),
 
   listEvents: (sourceId: string, params: EventQuery = {}) => {
     const q = new URLSearchParams();

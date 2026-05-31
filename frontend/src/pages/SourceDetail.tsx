@@ -23,6 +23,19 @@ export default function SourceDetail() {
   const [bucket, setBucket] = useState<Bucket>("hour");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [tab, setTab] = useState<"events" | "analysis">("events");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [draftDesc, setDraftDesc] = useState("");
+
+  const sourcesQ = useQuery({ queryKey: ["sources"], queryFn: api.listSources });
+  const source = sourcesQ.data?.find((s) => s.source_id === sourceId);
+
+  const saveDesc = useMutation({
+    mutationFn: () => api.updateSource(sourceId, draftDesc.trim() || null),
+    onSuccess: () => {
+      setEditingDesc(false);
+      qc.invalidateQueries({ queryKey: ["sources"] });
+    },
+  });
 
   const stats = useQuery({
     queryKey: ["stats", sourceId, bucket],
@@ -75,6 +88,61 @@ export default function SourceDetail() {
           </button>
         }
       />
+
+      {/* Description */}
+      <div className="card p-4 mb-6">
+        {editingDesc ? (
+          <div className="space-y-2">
+            <textarea
+              className="input min-h-[72px] resize-y"
+              value={draftDesc}
+              onChange={(e) => setDraftDesc(e.target.value)}
+              placeholder="Describe this data source…"
+              autoFocus
+            />
+            <div className="flex items-center gap-2">
+              <button
+                className="btn-primary"
+                onClick={() => saveDesc.mutate()}
+                disabled={saveDesc.isPending}
+              >
+                {saveDesc.isPending ? "Saving…" : "Save"}
+              </button>
+              <button
+                className="btn-outline"
+                onClick={() => setEditingDesc(false)}
+                disabled={saveDesc.isPending}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                Description
+              </div>
+              {source?.description ? (
+                <p className="text-slate-700 whitespace-pre-wrap">
+                  {source.description}
+                </p>
+              ) : (
+                <p className="text-slate-400 italic">No description yet.</p>
+              )}
+            </div>
+            <button
+              className="btn-ghost !px-2 !py-1 text-sm text-violet-700 shrink-0"
+              onClick={() => {
+                setDraftDesc(source?.description ?? "");
+                setEditingDesc(true);
+              }}
+            >
+              Edit
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Volume chart */}
       <div className="card p-4 mb-6">

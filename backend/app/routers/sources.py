@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_db
 from ..deps import Principal, get_current_admin, get_principal
 from ..models import Admin, Event, Source
-from ..schemas import SourceOut
+from ..schemas import SourceOut, SourceUpdate
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -19,6 +19,23 @@ async def list_sources(
         await db.execute(select(Source).order_by(Source.last_seen.desc()))
     ).scalars().all()
     return list(rows)
+
+
+@router.patch("/{source_id}", response_model=SourceOut)
+async def update_source(
+    source_id: str,
+    body: SourceUpdate,
+    _: Principal = Depends(get_principal),
+    db: AsyncSession = Depends(get_db),
+) -> Source:
+    """Update editable source metadata (currently just the description)."""
+    src = await db.get(Source, source_id)
+    if not src:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Source not found")
+    src.description = body.description
+    await db.commit()
+    await db.refresh(src)
+    return src
 
 
 @router.delete("/{source_id}", status_code=status.HTTP_204_NO_CONTENT)

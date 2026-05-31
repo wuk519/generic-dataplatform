@@ -55,9 +55,14 @@ class SourceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     source_id: str
+    description: str | None = None
     first_seen: datetime
     last_seen: datetime
     event_count: int
+
+
+class SourceUpdate(BaseModel):
+    description: str | None = Field(default=None, max_length=2000)
 
 
 class EventOut(BaseModel):

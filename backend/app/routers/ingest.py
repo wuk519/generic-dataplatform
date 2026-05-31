@@ -5,12 +5,28 @@ import json
 from datetime import datetime, timezone
 from pathlib import PurePosixPath
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
 from ..deps import Principal, get_principal
-from ..ingest_core import BATCH_SIZE, DROP, infer_scalar, insert_batch, normalize_record
+from ..ingest_core import (
+    BATCH_SIZE,
+    DROP,
+    infer_scalar,
+    insert_batch,
+    normalize_record,
+    set_source_descriptions,
+)
 from ..models import ApiKey
 from ..schemas import IngestRecord, IngestResponse
 
@@ -124,6 +140,9 @@ def _parse_xlsx(data: bytes) -> list[dict]:
 @router.post("", response_model=IngestResponse)
 async def ingest(
     body: list[IngestRecord] | IngestRecord,
+    description: str | None = Query(
+        None, description="Optional description to set on the source(s) ingested"
+    ),
     principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> IngestResponse:
@@ -136,6 +155,9 @@ async def ingest(
     for i in range(0, len(rows), BATCH_SIZE):
         await insert_batch(db, rows[i : i + BATCH_SIZE])
 
+    if description is not None:
+        await set_source_descriptions(db, {r["source_id"] for r in rows}, description)
+
     _touch_api_key(principal)
     await db.commit()
     return IngestResponse(accepted=len(rows))
@@ -146,6 +168,7 @@ async def upload(
     file: UploadFile = File(...),
     source_id: str | None = Form(None),
     format: str | None = Form(None),
+    description: str | None = Form(None),
     principal: Principal = Depends(get_principal),
     db: AsyncSession = Depends(get_db),
 ) -> IngestResponse:
@@ -178,6 +201,7 @@ async def upload(
 
     accepted = 0
     batch: list[dict] = []
+    touched: set[str] = set()
 
     async def flush() -> None:
         nonlocal accepted, batch
@@ -188,7 +212,9 @@ async def upload(
             batch = []
 
     def add(obj: dict) -> None:
-        batch.append(normalize_record(obj, source_id))
+        row = normalize_record(obj, source_id)
+        touched.add(row["source_id"])
+        batch.append(row)
 
     try:
         if fmt == "ndjson":
@@ -238,6 +264,9 @@ async def upload(
         ) from e
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
+
+    if description is not None and description.strip():
+        await set_source_descriptions(db, touched, description.strip())
 
     _touch_api_key(principal)
     await db.commit()

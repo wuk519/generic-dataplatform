@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -78,6 +78,19 @@ def normalize_record(record: dict[str, Any], default_source_id: str | None = Non
 
     payload = {k: v for k, v in record.items() if k not in ("source_id", "timestamp")}
     return {"source_id": str(src), "timestamp": ts, "payload": payload}
+
+
+async def set_source_descriptions(
+    db: AsyncSession, source_ids: set[str], description: str
+) -> None:
+    """Set the description on the given sources (they must already exist)."""
+    if not source_ids:
+        return
+    await db.execute(
+        update(Source)
+        .where(Source.source_id.in_(source_ids))
+        .values(description=description)
+    )
 
 
 async def insert_batch(db: AsyncSession, rows: list[dict]) -> None:

@@ -26,6 +26,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export type Source = {
   source_id: string;
+  description: string | null;
   first_seen: string;
   last_seen: string;
   event_count: number;
@@ -96,6 +97,11 @@ export const api = {
     request<void>(`/sources/${encodeURIComponent(sourceId)}`, {
       method: "DELETE",
     }),
+  updateSource: (sourceId: string, description: string | null) =>
+    request<Source>(`/sources/${encodeURIComponent(sourceId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ description }),
+    }),
 
   listEvents: (sourceId: string, params: EventQuery = {}) => {
     const q = new URLSearchParams();
@@ -143,11 +149,16 @@ export const api = {
   deleteApiKey: (id: number) =>
     request<void>(`/api-keys/${id}`, { method: "DELETE" }),
 
-  upload: (file: File, sourceId: string, format?: string) => {
+  upload: (
+    file: File,
+    sourceId: string,
+    opts: { format?: string; description?: string } = {},
+  ) => {
     const fd = new FormData();
     fd.append("file", file);
     if (sourceId) fd.append("source_id", sourceId);
-    if (format) fd.append("format", format);
+    if (opts.format) fd.append("format", opts.format);
+    if (opts.description) fd.append("description", opts.description);
     return request<{ accepted: number; format: string | null }>(
       "/ingest/upload",
       { method: "POST", body: fd },

@@ -156,6 +156,11 @@ export default function Sources() {
                           </span>
                           <ChevronRightIcon width={14} height={14} />
                         </Link>
+                        {s.description && (
+                          <div className="text-xs text-slate-400 mt-0.5 max-w-md truncate">
+                            {s.description}
+                          </div>
+                        )}
                       </td>
                       <td className="td text-right tabular-nums font-medium">
                         {formatNumber(s.event_count)}

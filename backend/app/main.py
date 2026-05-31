@@ -40,26 +40,30 @@ async def _migrate_schema(conn) -> None:
     existing columns. So when the model changes, we patch existing DBs here.
     All statements are idempotent and run before `create_all`.
     """
-    table_exists = await conn.scalar(text("SELECT to_regclass('api_keys') IS NOT NULL"))
-    if not table_exists:
-        return
-
-    # v0.4.0: stopped hashing API keys (`key_hash`/`prefix` columns → single
-    # plaintext `key` column). The full key isn't recoverable from the hash,
-    # so the cleanest migration is to drop and recreate — all existing keys
-    # become invalid and the user creates new ones.
-    has_old_schema = await conn.scalar(
-        text(
-            "SELECT 1 FROM information_schema.columns "
-            "WHERE table_name = 'api_keys' AND column_name = 'key_hash'"
+    # v0.7.0: sources gained a user-provided `description`.
+    if await conn.scalar(text("SELECT to_regclass('sources') IS NOT NULL")):
+        await conn.execute(
+            text("ALTER TABLE sources ADD COLUMN IF NOT EXISTS description TEXT")
         )
-    )
-    if has_old_schema:
-        await conn.execute(text("DROP TABLE api_keys"))
-        return
 
-    # v0.3.1: dropped `revoked` column from ApiKey model.
-    await conn.execute(text("ALTER TABLE api_keys DROP COLUMN IF EXISTS revoked"))
+    if await conn.scalar(text("SELECT to_regclass('api_keys') IS NOT NULL")):
+        # v0.4.0: stopped hashing API keys (`key_hash`/`prefix` columns → single
+        # plaintext `key` column). The full key isn't recoverable from the hash,
+        # so the cleanest migration is to drop and recreate — all existing keys
+        # become invalid and the user creates new ones.
+        has_old_schema = await conn.scalar(
+            text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name = 'api_keys' AND column_name = 'key_hash'"
+            )
+        )
+        if has_old_schema:
+            await conn.execute(text("DROP TABLE api_keys"))
+        else:
+            # v0.3.1: dropped `revoked` column from ApiKey model.
+            await conn.execute(
+                text("ALTER TABLE api_keys DROP COLUMN IF EXISTS revoked")
+            )
 
 
 @asynccontextmanager

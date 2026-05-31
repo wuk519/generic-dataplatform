@@ -243,6 +243,24 @@ curl -X POST http://localhost:8000/ingest/upload \
   -H "X-API-Key: dpk_..." \
   -F "source_id=sensors" \
   -F "file=@readings.xlsx"
+
+# Attach a description to the source while uploading
+curl -X POST http://localhost:8000/ingest/upload \
+  -H "X-API-Key: dpk_..." \
+  -F "source_id=sensors" \
+  -F "description=Accelerometer readings from device A" \
+  -F "file=@readings.csv"
+```
+
+A source can carry an optional human-readable **description**. Set it while
+ingesting (the `description` form field on upload, or a `?description=` query
+param on `POST /ingest`), or edit it any time:
+
+```bash
+curl -X PATCH http://localhost:8000/sources/sensors \
+  -H "X-API-Key: dpk_..." \
+  -H "Content-Type: application/json" \
+  -d '{"description":"Accelerometer readings from device A"}'
 ```
 
 The upload response reports which format was used:
@@ -323,7 +341,7 @@ backend/
       auth.py          # POST /auth/login, GET /auth/me
       api_keys.py      # CRUD on /api-keys (admin-only)
       ingest.py        # POST /ingest, POST /ingest/upload (csv/tsv/json/ndjson/xlsx/gz)
-      sources.py       # GET /sources, DELETE /sources/{id}
+      sources.py       # GET /sources, PATCH /sources/{id}, DELETE /sources/{id}
       events.py        # GET /sources/{id}/events, /stats
       analysis.py      # GET /sources/{id}/fields, /series
   scripts/
@@ -351,7 +369,7 @@ dev.py                 # cross-platform runner (Postgres + backend + frontend)
 ```
 admin       (id, username, password_hash, created_at)
 api_keys    (id, name, key UNIQUE, created_at, last_used_at)
-sources     (source_id PK, first_seen, last_seen, event_count)
+sources     (source_id PK, description, first_seen, last_seen, event_count)
 events      (id BIGSERIAL, source_id FK, timestamp, payload JSONB, ingested_at)
             INDEX (source_id, timestamp)
 ```

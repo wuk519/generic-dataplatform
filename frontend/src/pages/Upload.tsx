@@ -5,6 +5,7 @@ import { UploadIcon } from "../components/icons";
 
 export default function Upload() {
   const [sourceId, setSourceId] = useState("");
+  const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; msg: string } | null>(
     null,
@@ -19,7 +20,9 @@ export default function Upload() {
     setBusy(true);
     setStatus(null);
     try {
-      const r = await api.upload(file, sourceId);
+      const r = await api.upload(file, sourceId, {
+        description: description.trim() || undefined,
+      });
       const fmt = r.format ? ` as ${r.format.toUpperCase()}` : "";
       setStatus({ ok: true, msg: `Accepted ${r.accepted} record(s)${fmt}.` });
       setFile(null);
@@ -53,6 +56,23 @@ export default function Upload() {
           />
           <p className="text-xs text-slate-400 mt-1">
             Used for records that don't carry their own <code>source_id</code>.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Description{" "}
+            <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <textarea
+            className="input min-h-[72px] resize-y"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What is this data source? e.g. Accelerometer readings from device A"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Saved on the source(s) in this upload. You can edit it later on the
+            source page.
           </p>
         </div>
 

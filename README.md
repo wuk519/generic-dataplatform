@@ -50,8 +50,10 @@ cd generic-dataplatform
    ```
    This produces `dist/dataplatform-<version>.zip` (e.g. `dist/dataplatform-0.1.0.zip`) containing only the files tracked by git — no `.venv`, no `node_modules`, no `.env`.
 2. Copy that zip to the target machine.
-3. Unzip — you'll get a `dataplatform-<version>/` folder.
-4. `cd dataplatform-<version>` and continue with Step 3.
+3. Extract it:
+   - **Windows**: right-click → *Extract All* (creates a single `dataplatform-<version>` folder).
+   - **macOS/Linux**: `unzip -d dataplatform-<version> dataplatform-<version>.zip` (the files sit at the zip root, so extract into a named folder to keep things tidy).
+4. `cd` into the extracted folder and continue with Step 3.
 
 ---
 

@@ -43,12 +43,13 @@ def main() -> int:
     out = DIST / f"dataplatform-{version}.zip"
 
     print(f"==> Building {out.relative_to(ROOT)} from git HEAD")
+    # No --prefix: files sit at the zip root. Windows "Extract All" then creates
+    # a single folder named after the zip (avoiding a doubled directory level).
     r = subprocess.run(
         [
             "git",
             "archive",
             "--format=zip",
-            f"--prefix=dataplatform-{version}/",
             "-o",
             str(out),
             "HEAD",
@@ -63,10 +64,11 @@ def main() -> int:
     print()
     print("To use it on another machine:")
     print(f"  1. Copy {out.name} there")
-    print(f"  2. Unzip — produces a 'dataplatform-{version}/' folder")
-    print(f"  3. cd dataplatform-{version}")
+    print("  2. Windows: right-click the zip -> Extract All (creates one folder)")
+    print(f"     macOS/Linux: unzip -d dataplatform-{version} {out.name}")
+    print(f"  3. cd into the extracted folder")
     print("  4. ./install.sh        # macOS/Ubuntu")
-    print("  4. install.ps1         # Windows")
+    print("     install.ps1          # Windows")
     print("  5. python dev.py")
     return 0
 

@@ -78,3 +78,30 @@ class EventsPage(BaseModel):
 class StatPoint(BaseModel):
     ts: datetime
     count: int
+
+
+class NumericStats(BaseModel):
+    count: int
+    min: float
+    max: float
+    mean: float
+    stddev: float
+    sum: float
+
+
+class FieldStat(BaseModel):
+    name: str
+    type: str  # number | boolean | string | object | mixed
+    present: int  # non-null occurrences in the sample
+    numeric: NumericStats | None = None
+
+
+class FieldsResponse(BaseModel):
+    sampled_events: int
+    fields: list[FieldStat]
+
+
+class SeriesResponse(BaseModel):
+    x: str | None
+    fields: list[str]
+    points: list[dict[str, Any]]

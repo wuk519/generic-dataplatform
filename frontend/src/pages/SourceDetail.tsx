@@ -6,6 +6,7 @@ import { formatNumber } from "../lib/format";
 import { ConfirmDialog, EmptyState, PageHeader, Spinner } from "../components/ui";
 import { ArrowLeftIcon, PulseIcon, TrashIcon } from "../components/icons";
 import BarChart from "../components/BarChart";
+import AnalysisPanel from "../components/AnalysisPanel";
 
 type Bucket = "minute" | "hour" | "day";
 
@@ -21,6 +22,7 @@ export default function SourceDetail() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [bucket, setBucket] = useState<Bucket>("hour");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tab, setTab] = useState<"events" | "analysis">("events");
 
   const stats = useQuery({
     queryKey: ["stats", sourceId, bucket],
@@ -106,6 +108,27 @@ export default function SourceDetail() {
         )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-slate-200 mb-4">
+        {(["events", "analysis"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 text-sm font-medium capitalize -mb-px border-b-2 transition-colors ${
+              tab === t
+                ? "border-violet-600 text-violet-700"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === "analysis" && <AnalysisPanel sourceId={sourceId} />}
+
+      {tab === "events" && (
+        <>
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <label className="text-sm">
@@ -212,6 +235,8 @@ export default function SourceDetail() {
           </button>
         </div>
       </div>
+        </>
+      )}
 
       <ConfirmDialog
         open={confirmDelete}

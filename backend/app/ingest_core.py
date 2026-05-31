@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -8,6 +9,49 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .models import Event, Source
 
 BATCH_SIZE = 1000
+
+# Integers without leading zeros (so e.g. zip codes / phone numbers stay strings).
+_INT_RE = re.compile(r"^-?(?:0|[1-9]\d*)$")
+
+# Sentinel for "drop this cell from the payload".
+DROP = object()
+
+
+def infer_scalar(raw: Any) -> Any:
+    """Coerce a raw cell value (from CSV/TSV/Excel) into a typed JSON value.
+
+    Returns the sentinel `DROP` for empty cells so callers can omit the key.
+    Non-string inputs (already-typed Excel cells) are passed through unchanged
+    except for empty strings / None.
+    """
+    if raw is None:
+        return DROP
+    if not isinstance(raw, str):
+        # Excel hands us real ints/floats/bools/datetimes already.
+        if isinstance(raw, datetime):
+            return raw.isoformat()
+        return raw
+    s = raw.strip()
+    if not s:
+        return DROP
+    lower = s.lower()
+    if lower == "true":
+        return True
+    if lower == "false":
+        return False
+    if lower in ("null", "none"):
+        return None
+    if _INT_RE.match(s):
+        try:
+            return int(s)
+        except ValueError:
+            pass
+    if "." in s or "e" in lower:
+        try:
+            return float(s)
+        except ValueError:
+            pass
+    return s
 
 
 def normalize_record(record: dict[str, Any], default_source_id: str | None = None) -> dict:

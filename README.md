@@ -227,13 +227,20 @@ curl -X POST http://localhost:8000/ingest \
   -H "Content-Type: application/json" \
   -d '[{"source_id":"web-prod","msg":"a"},{"source_id":"web-prod","msg":"b"}]'
 
-# File upload — format is auto-detected from the file extension
-# (.csv, .ndjson / .jsonl, .json). For CSV, cell values are auto-typed
-# (numbers, booleans, null). Pass `-F "format=..."` only to override.
+# File upload — format is auto-detected from the file extension:
+#   .csv  .tsv/.tab  .ndjson/.jsonl  .json  .xlsx/.xlsm  (optionally .gz)
+# For CSV/TSV/Excel, cell values are auto-typed (numbers, booleans, null).
+# Gzipped files are decompressed on the fly. Pass -F "format=..." to override.
 curl -X POST http://localhost:8000/ingest/upload \
   -H "X-API-Key: dpk_..." \
   -F "source_id=web-prod" \
   -F "file=@events.csv"
+
+# Excel and gzipped files work the same way
+curl -X POST http://localhost:8000/ingest/upload \
+  -H "X-API-Key: dpk_..." \
+  -F "source_id=sensors" \
+  -F "file=@readings.xlsx"
 ```
 
 The upload response reports which format was used:
@@ -260,6 +267,25 @@ curl "http://localhost:8000/sources/web-prod/events?limit=10" \
 curl "http://localhost:8000/sources/web-prod/stats?bucket=hour" \
   -H "X-API-Key: dpk_..."
 ```
+
+#### Analysis
+
+Two endpoints power the source **Analysis** tab — field profiling and chart data:
+
+```bash
+# Profile the top-level payload fields (type + numeric stats) over a sample
+# of the most recent events. Numeric fields include count/min/max/mean/stddev.
+curl "http://localhost:8000/sources/sensors/fields" \
+  -H "X-API-Key: dpk_..."
+
+# Pull selected fields per event, time-ordered, for plotting one against another
+curl "http://localhost:8000/sources/sensors/series?fields=x,y&limit=2000" \
+  -H "X-API-Key: dpk_..."
+```
+
+In the UI, open a source → **Analysis** to see the field-metrics table and an
+interactive chart where you pick any numeric field for the Y axis and either
+time or another numeric field for the X axis.
 
 Or use the admin JWT — get one with:
 
@@ -290,13 +316,14 @@ backend/
     schemas.py         # Pydantic v2 request/response models
     auth.py            # bcrypt passwords, JWT, API-key generation
     deps.py            # get_current_admin, get_principal (JWT or API key)
-    ingest_core.py     # normalize_record + insert_batch (with source upsert)
+    ingest_core.py     # normalize_record, insert_batch, scalar type-inference
     routers/
       auth.py          # POST /auth/login, GET /auth/me
       api_keys.py      # CRUD on /api-keys (admin-only)
-      ingest.py        # POST /ingest, POST /ingest/upload
-      sources.py       # GET /sources
+      ingest.py        # POST /ingest, POST /ingest/upload (csv/tsv/json/ndjson/xlsx/gz)
+      sources.py       # GET /sources, DELETE /sources/{id}
       events.py        # GET /sources/{id}/events, /stats
+      analysis.py      # GET /sources/{id}/fields, /series
   scripts/
     create_admin.py    # manual admin create / password reset
   pyproject.toml       # package metadata + deps (single source of version)
@@ -305,8 +332,8 @@ frontend/
   src/
     App.tsx, main.tsx, index.css
     api/client.ts      # typed fetch wrapper
-    lib/auth.ts        # JWT in localStorage
-    components/Layout.tsx
+    lib/{auth.ts, format.ts}
+    components/         # Layout, icons, ui, BarChart, ScatterChart, AnalysisPanel
     pages/             # Login, Sources, SourceDetail, Upload, ApiKeys
   package.json, vite.config.ts, tailwind.config.ts, tsconfig.json
 docker-compose.yml     # postgres only

@@ -58,6 +58,31 @@ export type ApiKey = {
 
 export type StatPoint = { ts: string; count: number };
 
+export type NumericStats = {
+  count: number;
+  min: number;
+  max: number;
+  mean: number;
+  stddev: number;
+  sum: number;
+};
+
+export type FieldStat = {
+  name: string;
+  type: "number" | "boolean" | "string" | "object" | "mixed";
+  present: number;
+  numeric: NumericStats | null;
+};
+
+export type FieldsResponse = { sampled_events: number; fields: FieldStat[] };
+
+export type SeriesPoint = { ts: string } & Record<string, unknown>;
+export type SeriesResponse = {
+  x: string | null;
+  fields: string[];
+  points: SeriesPoint[];
+};
+
 export const api = {
   login: (username: string, password: string) =>
     request<{ access_token: string }>("/auth/login", {
@@ -88,6 +113,26 @@ export const api = {
     request<StatPoint[]>(
       `/sources/${encodeURIComponent(sourceId)}/stats?bucket=${bucket}`,
     ),
+
+  fields: (sourceId: string) =>
+    request<FieldsResponse>(
+      `/sources/${encodeURIComponent(sourceId)}/fields`,
+    ),
+
+  series: (
+    sourceId: string,
+    fields: string[],
+    params: { from?: string; to?: string; limit?: number } = {},
+  ) => {
+    const q = new URLSearchParams();
+    q.set("fields", fields.join(","));
+    if (params.from) q.set("from", params.from);
+    if (params.to) q.set("to", params.to);
+    if (params.limit) q.set("limit", String(params.limit));
+    return request<SeriesResponse>(
+      `/sources/${encodeURIComponent(sourceId)}/series?${q.toString()}`,
+    );
+  },
 
   listApiKeys: () => request<ApiKey[]>("/api-keys"),
   createApiKey: (name: string) =>

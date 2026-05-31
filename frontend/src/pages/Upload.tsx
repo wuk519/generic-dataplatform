@@ -95,7 +95,7 @@ export default function Upload() {
                   Drag a file here, or click to browse
                 </div>
                 <div className="text-xs text-slate-400">
-                  CSV, NDJSON / JSONL, or JSON array
+                  CSV, TSV, NDJSON / JSONL, JSON array, or Excel (.xlsx)
                 </div>
               </>
             )}
@@ -103,13 +103,16 @@ export default function Upload() {
               ref={inputRef}
               type="file"
               className="hidden"
-              accept=".csv,.ndjson,.jsonl,.json,text/csv,application/json,application/x-ndjson"
+              accept=".csv,.tsv,.tab,.ndjson,.jsonl,.json,.xlsx,.xlsm,.gz,text/csv,application/json,application/x-ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </div>
           <p className="text-xs text-slate-400 mt-2">
-            Format is auto-detected from the extension. CSV values are typed
-            (numbers, booleans, <code>null</code>) automatically.
+            Format is auto-detected from the extension. CSV/TSV/Excel cell values
+            are typed (numbers, booleans, <code>null</code>) automatically.
+            Gzipped files (<code>.gz</code>) are decompressed on the fly. After
+            upload, open the source's <strong>Analysis</strong> tab to explore
+            field metrics and plot any numeric fields.
           </p>
         </div>
 

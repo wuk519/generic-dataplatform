@@ -9,7 +9,7 @@ from .auth import hash_password
 from .config import settings
 from .db import Base, SessionLocal, engine
 from .models import Admin
-from .routers import api_keys, auth, events, ingest, sources
+from .routers import analysis, api_keys, auth, events, ingest, sources
 
 
 async def _bootstrap_admin() -> None:
@@ -91,6 +91,7 @@ app.include_router(api_keys.router)
 app.include_router(ingest.router)
 app.include_router(sources.router)
 app.include_router(events.router)
+app.include_router(analysis.router)
 
 
 @app.get("/health")

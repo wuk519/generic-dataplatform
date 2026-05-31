@@ -24,7 +24,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
-export type Me = { id: number; username: string; role: "admin" | "user" };
+export type Me = {
+  id: number;
+  username: string;
+  role: "admin" | "user";
+  display_name: string | null;
+  email: string | null;
+  avatar: string | null;
+};
 
 export type User = {
   id: number;
@@ -110,6 +117,19 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
   me: () => request<Me>("/auth/me"),
+  updateProfile: (patch: { display_name: string | null; email: string | null }) =>
+    request<Me>("/auth/me", { method: "PATCH", body: JSON.stringify(patch) }),
+  changePassword: (current_password: string, new_password: string) =>
+    request<void>("/auth/me/password", {
+      method: "POST",
+      body: JSON.stringify({ current_password, new_password }),
+    }),
+  uploadAvatar: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return request<Me>("/auth/me/avatar", { method: "POST", body: fd });
+  },
+  deleteAvatar: () => request<Me>("/auth/me/avatar", { method: "DELETE" }),
 
   listUsers: () => request<User[]>("/users"),
   createUser: (username: string, password: string, role: "admin" | "user") =>

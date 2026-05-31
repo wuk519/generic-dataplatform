@@ -23,6 +23,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(16), default="user")  # "admin" | "user"
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Profile fields (all optional).
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar: Mapped[str | None] = mapped_column(Text, nullable=True)  # data URI
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now()
     )

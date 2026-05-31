@@ -40,6 +40,18 @@ async def _migrate_pre_create(conn) -> None:
 
     Runs before create_all. All statements are idempotent.
     """
+    if await conn.scalar(text("SELECT to_regclass('users') IS NOT NULL")):
+        # v0.9.0: profile fields.
+        await conn.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(120)")
+        )
+        await conn.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)")
+        )
+        await conn.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT")
+        )
+
     if await conn.scalar(text("SELECT to_regclass('sources') IS NOT NULL")):
         # v0.7.0: user-provided description. v0.8.0: ownership.
         await conn.execute(

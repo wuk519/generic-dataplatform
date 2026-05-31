@@ -55,6 +55,43 @@ export function StatCard({
   );
 }
 
+export function Avatar({
+  name,
+  src,
+  size = 36,
+}: {
+  name: string;
+  src?: string | null;
+  size?: number;
+}) {
+  const initials = name
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        width={size}
+        height={size}
+        className="rounded-full object-cover bg-slate-200"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <div
+      className="rounded-full grid place-items-center bg-gradient-to-br from-violet-500 to-indigo-600 text-white font-semibold"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {initials || "?"}
+    </div>
+  );
+}
+
 export function Spinner({ className = "" }: { className?: string }) {
   return (
     <svg

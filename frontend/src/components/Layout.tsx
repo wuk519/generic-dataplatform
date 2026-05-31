@@ -1,6 +1,7 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { clearToken } from "../lib/auth";
 import { useMe } from "../lib/useMe";
+import { Avatar } from "./ui";
 import {
   DatabaseIcon,
   KeyIcon,
@@ -58,14 +59,24 @@ export default function Layout() {
 
         <div className="border-t border-white/10 p-3">
           {me && (
-            <div className="px-3 py-2 mb-1">
-              <div className="text-sm font-medium text-white truncate">
-                {me.username}
+            <Link
+              to="/profile"
+              className="flex items-center gap-3 px-3 py-2 mb-1 rounded-lg hover:bg-white/5 transition-colors"
+            >
+              <Avatar
+                name={me.display_name || me.username}
+                src={me.avatar}
+                size={32}
+              />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-white truncate">
+                  {me.display_name || me.username}
+                </div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                  {me.role}
+                </div>
               </div>
-              <div className="text-[11px] uppercase tracking-wide text-slate-500">
-                {me.role}
-              </div>
-            </div>
+            </Link>
           )}
           <button
             onClick={() => {

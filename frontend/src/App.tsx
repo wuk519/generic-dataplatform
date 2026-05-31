@@ -7,6 +7,7 @@ import SourceDetail from "./pages/SourceDetail";
 import Upload from "./pages/Upload";
 import ApiKeys from "./pages/ApiKeys";
 import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 import { isAuthenticated } from "./lib/auth";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="upload" element={<Upload />} />
         <Route path="api-keys" element={<ApiKeys />} />
         <Route path="users" element={<Users />} />
+        <Route path="profile" element={<Profile />} />
       </Route>
     </Routes>
   );

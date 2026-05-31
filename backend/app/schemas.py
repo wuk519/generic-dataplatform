@@ -20,9 +20,24 @@ class LoginResponse(BaseModel):
 
 
 class MeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     role: str
+    display_name: str | None = None
+    email: str | None = None
+    avatar: str | None = None
+
+
+class ProfileUpdate(BaseModel):
+    display_name: str | None = Field(default=None, max_length=120)
+    email: str | None = Field(default=None, max_length=255)
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6, max_length=128)
 
 
 class UserOut(BaseModel):

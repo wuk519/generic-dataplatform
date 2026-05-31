@@ -145,6 +145,11 @@ This first account is the **admin**. Other people can create their own
 Admin-only API endpoints (JWT required): `/users` (CRUD). Everything else
 accepts a JWT or an API key, scoped to the caller.
 
+Every signed-in user has a **Profile** page (click your name in the sidebar) to
+set a display name, email, and profile picture (≤512 KB image, stored inline),
+and to change their own password. Backed by `PATCH /auth/me`,
+`POST /auth/me/password`, and `POST`/`DELETE /auth/me/avatar`.
+
 ---
 
 ## Step 5 — Try it
@@ -361,7 +366,7 @@ backend/
     deps.py            # get_current_admin, get_principal (JWT or API key)
     ingest_core.py     # normalize_record, insert_batch, scalar type-inference
     routers/
-      auth.py          # POST /auth/register, /auth/login, GET /auth/me
+      auth.py          # register/login, /auth/me profile, password, avatar
       users.py         # CRUD on /users (admin-only)
       api_keys.py      # CRUD on /api-keys (owner-scoped)
       ingest.py        # POST /ingest, POST /ingest/upload (csv/tsv/json/ndjson/xlsx/gz)
@@ -378,7 +383,7 @@ frontend/
     api/client.ts      # typed fetch wrapper
     lib/{auth.ts, format.ts}
     components/         # Layout, icons, ui, BarChart, ScatterChart, AnalysisPanel
-    pages/             # Login, Register, Sources, SourceDetail, Upload, ApiKeys, Users
+    pages/             # Login, Register, Sources, SourceDetail, Upload, ApiKeys, Users, Profile
   package.json, vite.config.ts, tailwind.config.ts, tsconfig.json
 docker-compose.yml     # postgres only
 install.sh             # one-shot setup (macOS / Ubuntu)
@@ -391,7 +396,7 @@ dev.py                 # cross-platform runner (Postgres + backend + frontend)
 ## Schema
 
 ```
-users       (id, username UNIQUE, password_hash, role, is_active, created_at)
+users       (id, username UNIQUE, password_hash, role, is_active, display_name, email, avatar, created_at)
 api_keys    (id, name, key UNIQUE, owner_id FK->users, created_at, last_used_at)
 sources     (source_id PK, description, owner_id FK->users, first_seen, last_seen, event_count)
 events      (id BIGSERIAL, source_id FK, timestamp, payload JSONB, ingested_at)

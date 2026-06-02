@@ -296,6 +296,11 @@ The upload response reports which format was used:
 {"accepted": 100, "format": "csv"}
 ```
 
+In the UI, the **Upload** page lets you stage many files at once — drag-and-drop,
+**Add files**, or **Add folder** (selections accumulate across multiple folders) —
+then uploads them one by one with a per-file progress list and a clear
+completion summary.
+
 Records may carry their own `timestamp` (ISO 8601 string, epoch seconds, or epoch ms-as-float). If absent, the server stamps `now()` in UTC. `source_id` is required (the upload endpoint accepts a default to apply to records that lack one).
 
 ### Query
